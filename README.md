@@ -1,4 +1,5 @@
 # AngularJS datepicker directives
+- Forked from g00fy-/angular-datepicker
 
 ## WIP
 

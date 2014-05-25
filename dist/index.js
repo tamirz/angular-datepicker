@@ -7,9 +7,21 @@ var Module = angular.module('datePicker', []);
 Module.constant('datePickerConfig', {
   template: 'templates/datepicker.html',
   view: 'month',
-  views: ['year', 'month', 'date', 'hours', 'minutes'],
+  views: ['year', 'month', 'date', 'hours', 'minutes', 'exactMinutes'],
   step: 5
 });
+
+function getVisibleExactMinutes(date, step) {
+    date = new Date(date || new Date());
+    date = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes());
+    var minutes = [];
+    var stop = date.getTime() + 60 * step * 1000;
+    while (date.getTime() < stop) {
+        minutes.push(date);
+        date = new Date(date.getTime() + 1 * 60 * 1000);
+    }
+    return minutes;
+}
 
 function getVisibleMinutes(date, step) {
   date = new Date(date || new Date());
@@ -122,7 +134,7 @@ Module.directive('datePicker', function datePickerDirective(datePickerConfig) {
       /** @namespace attrs.minView, attrs.maxView */
       scope.views =scope.views.slice(
         scope.views.indexOf(attrs.maxView || 'year'),
-        scope.views.indexOf(attrs.minView || 'minutes')+1
+        scope.views.indexOf(attrs.minView || 'exactMinutes')+1
       );
 
       if (scope.views.length === 1 || scope.views.indexOf(scope.view)===-1) {
@@ -145,6 +157,8 @@ Module.directive('datePicker', function datePickerDirective(datePickerConfig) {
 
           //noinspection FallThroughInSwitchStatementJS
           switch (scope.view) {
+          case 'exactMinutes':
+            scope.model.setMinutes(date.getMinutes());
           case 'minutes':
             scope.model.setMinutes(date.getMinutes());
           /*falls through*/
@@ -188,6 +202,9 @@ Module.directive('datePicker', function datePickerDirective(datePickerConfig) {
         case 'minutes':
           scope.minutes = getVisibleMinutes(date, step);
           break;
+        case 'exactMinutes':
+          scope.exactMinutes = getVisibleExactMinutes(date, step);
+          break;
         }
       }
 
@@ -218,6 +235,9 @@ Module.directive('datePicker', function datePickerDirective(datePickerConfig) {
         case 'minutes':
           date.setHours(date.getHours() + delta);
           break;
+        case 'exactMinutes':
+            date.setMinutes(date.getMinutes() + delta);
+            break;
         }
         update();
       };
@@ -254,11 +274,17 @@ Module.directive('datePicker', function datePickerDirective(datePickerConfig) {
         return scope.isSameHour(date) && scope.model.getMinutes() === date.getMinutes();
       };
 
+      scope.isSameExactMinutes = function (date) {
+        return scope.isSameMinutes(date) && scope.model.getMinutes() === date.getMinutes();
+      };
+
       scope.isNow = function (date) {
         var is = true;
         var now = scope.now;
         //noinspection FallThroughInSwitchStatementJS
         switch (scope.view) {
+        case 'exactMinutes':
+          is &= date.getMinutes() === now.getMinutes();
         case 'minutes':
           is &= ~~(date.getMinutes()/step) === ~~(now.getMinutes()/step);
         /*falls through*/
@@ -553,6 +579,27 @@ angular.module("datePicker").run(["$templateCache", function($templateCache) {
     "                    <span ng-repeat=\"minute in minutes\"\n" +
     "                          ng-class=\"{active:isSameMinutes(minute),'now':isNow(minute)}\"\n" +
     "                          ng-click=\"setDate(minute)\">{{minute|date:\"HH:mm\"}}</span>\n" +
+    "        </td>\n" +
+    "      </tr>\n" +
+    "      </tbody>\n" +
+    "    </table>\n" +
+    "  </div>\n" +
+    "  <div ng-switch-when=\"exactMinutes\">\n" +
+    "    <table>\n" +
+    "      <thead>\n" +
+    "      <tr>\n" +
+    "        <th ng-click=\"prev()\">‹</th>\n" +
+    "        <th colspan=\"5\" class=\"switch\" ng-click=\"setView('minutes')\">{{ date|date:\"dd MMMM yyyy\" }}\n" +
+    "        </th>\n" +
+    "        <th ng-click=\"next()\">›</i></th>\n" +
+    "      </tr>\n" +
+    "      </thead>\n" +
+    "      <tbody>\n" +
+    "      <tr>\n" +
+    "        <td colspan=\"7\">\n" +
+    "                    <span ng-repeat=\"exactMinute in exactMinutes\"\n" +
+    "                          ng-class=\"{active:isSameExactMinutes(exactMinute),'now':isNow(exactMinute)}\"\n" +
+    "                          ng-click=\"setDate(exactMinute)\">{{exactMinute|date:\"HH:mm\"}}</span>\n" +
     "        </td>\n" +
     "      </tr>\n" +
     "      </tbody>\n" +
